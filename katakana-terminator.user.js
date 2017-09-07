@@ -18,17 +18,17 @@ String.prototype.format = function() {
     });
 };
 
-// Inspired by https://github.com/akira-kurogane/furigana-injector/blob/master/chrome_extension/text_to_furigana_dom_parse.js
-function scanTextNodes() {
-    var xPath = '//*[{0}]/text()[normalize-space(.) != ""]'.format(
-        '(*{0}select{0}textarea{0}script{0}ruby)'.format(
-            ') and not (ancestor-or-self::'
-        )
-    );
-    var s = _.evaluate(xPath, _.body, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-    for (var i = 0; i < s.snapshotLength; i++) {
-       var node = s.snapshotItem(i);
-       while ((node = addRuby(node)));
+// Inspired by http://www.the-art-of-web.com/javascript/search-highlight/
+function scanTextNodes(node) {
+    var excludeTags = /^(?:ruby|script|select|textarea)$/i;
+    if (node === undefined || !node) {
+        return scanTextNodes(_.body);
+    } else if (excludeTags.test(node.nodeName)) {
+        return;
+    } else if (node.hasChildNodes()) {
+        return node.childNodes.forEach(scanTextNodes);
+    } else if (node.nodeType == 3) {
+        while ((node = addRuby(node)));
     }
 }
 
@@ -97,7 +97,7 @@ function main(app_name) {
     } catch (e) {
         console.error('{0}: {1}'.format(app_name, e));
     } finally {
-        console.info('{0}: loaded'.format(app_name));
+        console.log('{0}: {1} items found'.format(app_name, queue[0].length));
     }
 }
 
