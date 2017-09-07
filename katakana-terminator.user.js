@@ -74,7 +74,8 @@ function googleTranslate(src, dest, text, nodes) {
         method: "GET",
         url: buildURL(api, params),
         onload: function(dom) {
-            var array = JSON.parse(dom.response)[0];
+            var escaped_result = dom.response.replace("'", '\u2019');
+            var array = JSON.parse(escaped_result)[0];
             for (var i = 0; i < array.length; i++) {
                 nodes[i].appendChild(_.createTextNode(array[i][0].trim()));
             }
