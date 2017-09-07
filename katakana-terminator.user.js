@@ -5,6 +5,7 @@
 // @namespace   https://github.com/Arnie97
 // @homepageURL https://github.com/Arnie97/katakana-terminator
 // @grant       GM_xmlhttpRequest
+// @version     2017.09.07
 // ==/UserScript==
 
 // define some shorthands
