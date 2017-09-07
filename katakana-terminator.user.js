@@ -26,7 +26,7 @@ function scanTextNodes(node) {
     } else if (excludeTags.test(node.nodeName)) {
         return;
     } else if (node.hasChildNodes()) {
-        return node.childNodes.forEach(scanTextNodes);
+        return [].forEach.call(node.childNodes, scanTextNodes);
     } else if (node.nodeType == 3) {
         while ((node = addRuby(node)));
     }
@@ -61,7 +61,7 @@ function buildURL(base, params) {
 }
 
 function googleTranslate(src, dest, text, nodes) {
-    var api = 'http://translate.google.cn/translate_a/single';
+    var api = 'https://translate.google.cn/translate_a/single';
     var params = {
         client: 't',
         sl: src,
@@ -74,7 +74,7 @@ function googleTranslate(src, dest, text, nodes) {
         method: "GET",
         url: buildURL(api, params),
         onload: function(dom) {
-            var escaped_result = dom.response.replace("'", '\u2019');
+            var escaped_result = dom.responseText.replace("'", '\u2019');
             var array = JSON.parse(escaped_result)[0];
             for (var i = 0; i < array.length; i++) {
                 nodes[i].appendChild(_.createTextNode(array[i][0].trim()));
