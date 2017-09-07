@@ -1,7 +1,9 @@
 // ==UserScript==
 // @name        Katakana Terminator
-// @namespace   Arnie97
 // @description Convert gairaigo (Japanese loan words) back to English
+// @author      Arnie97
+// @namespace   https://github.com/Arnie97
+// @homepageURL https://github.com/Arnie97/katakana-terminator
 // @grant       GM_xmlhttpRequest
 // ==/UserScript==
 
@@ -39,7 +41,8 @@ function addRuby(node) {
     var ruby = _.createElement('ruby');
     ruby.appendChild(_.createTextNode(match[0]));
     var rt = _.createElement('rt');
-    googleTranslate('ja', 'en', match[0], rt);
+    queue[0].push(match[0]);
+    queue[1].push(rt);
     ruby.appendChild(rt);
 
     var after = node.splitText(match.index);
@@ -57,7 +60,7 @@ function buildURL(base, params) {
     return base + '?' + query;
 }
 
-function googleTranslate(src, dest, text, node) {
+function googleTranslate(src, dest, text, nodes) {
     var api = 'http://translate.google.cn/translate_a/single';
     var params = {
         client: 't',
@@ -71,8 +74,10 @@ function googleTranslate(src, dest, text, node) {
         method: "GET",
         url: buildURL(api, params),
         onload: function(dom) {
-            var array = JSON.parse(dom.response);
-            node.appendChild(_.createTextNode(array[0][0][0]));
+            var array = JSON.parse(dom.response)[0];
+            for (var i = 0; i < array.length; i++) {
+                nodes[i].appendChild(_.createTextNode(array[i][0].trim()));
+            }
         }
     });
 }
@@ -86,6 +91,9 @@ function googleToken(r) {
 function main(app_name) {
     try {
         scanTextNodes();
+        if (queue[0].length) {
+            googleTranslate('ja', 'en', queue[0].join('\n'), queue[1]);
+        }
     } catch (e) {
         console.error('{0}: {1}'.format(app_name, e));
     } finally {
@@ -93,4 +101,5 @@ function main(app_name) {
     }
 }
 
+var queue = [[], []];
 main('Katakana Terminator');
