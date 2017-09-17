@@ -5,19 +5,19 @@
 // @namespace   https://github.com/Arnie97
 // @homepageURL https://github.com/Arnie97/katakana-terminator
 // @grant       GM_xmlhttpRequest
-// @version     2017.09.07
+// @version     2017.09.17
 // ==/UserScript==
 
 // define some shorthands
 var _ = document;
 
 // Forked from https://stackoverflow.com/a/4673436/5072722
-String.prototype.format = function() {
-    var args = arguments;
-    return this.replace(/{(\d+)}/g, function(match, number) {
-        return typeof args[number] != 'undefined'? args[number]: match;
+function format(str) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return str.replace(/{(\d+)}/g, function(match, number) {
+        return args[number] !== undefined? args[number]: match;
     });
-};
+}
 
 // Inspired by http://www.the-art-of-web.com/javascript/search-highlight/
 function scanTextNodes(node) {
@@ -109,9 +109,9 @@ function main(app_name) {
         }
         chunkTranslate(i, queue[0].length);
     } catch (e) {
-        console.error('{0}: {1}'.format(app_name, e));
+        console.error(format('{0}: {1}', app_name, e));
     } finally {
-        console.log('{0}: {1} items found'.format(app_name, queue[0].length));
+        console.log(format('{0}: {1} items found', app_name, queue[0].length));
     }
 }
 
