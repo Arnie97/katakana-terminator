@@ -5,7 +5,10 @@
 // @namespace   https://github.com/Arnie97
 // @homepageURL https://github.com/Arnie97/katakana-terminator
 // @grant       GM_xmlhttpRequest
-// @version     2017.09.17
+// @version     2018.01.02
+// @name:ja-JP  カタカナターミネータ
+// @name:zh-CN  片假名终结者
+// @description:zh-CN 在网页中的日语外来语上方标注英文原词
 // ==/UserScript==
 
 // define some shorthands
@@ -56,6 +59,13 @@ function addRuby(node) {
 function buildURL(base, params) {
     var query = Object.keys(params).map(function(k) {
         var esc = encodeURIComponent;
+        // Support arrays in parameters, just like Python Requests
+        // {keyA: 1, keyB: [2, 3]} => '?keyA=1&keyB=2&keyB=3'
+        if (params[k] instanceof Array) {
+            return params[k].map(function(v) {
+                return esc(k) + '=' + esc(v);
+            }).join('&');
+        }
         return esc(k) + '=' + esc(params[k]);
     }).join('&');
     return base + '?' + query;
@@ -67,7 +77,7 @@ function googleTranslate(src, dest, text, nodes) {
         client: 't',
         sl: src,
         tl: dest,
-        dt: 't',
+        dt: ['rm', 't'],
         tk: googleToken(text.trim()),
         q: text
     };
