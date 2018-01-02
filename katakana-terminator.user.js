@@ -71,24 +71,31 @@ function buildURL(base, params) {
     return base + '?' + query;
 }
 
-function googleTranslate(src, dest, text, nodes) {
+function googleTranslate(src, dest, texts, nodes) {
+    var full_text = texts.join('\n').trim();
     var api = 'https://translate.google.cn/translate_a/single';
     var params = {
         client: 't',
         sl: src,
         tl: dest,
         dt: ['rm', 't'],
-        tk: googleToken(text.trim()),
-        q: text
+        tk: googleToken(full_text),
+        q: full_text
     };
     GM_xmlhttpRequest({
         method: "GET",
         url: buildURL(api, params),
         onload: function(dom) {
             var escaped_result = dom.responseText.replace("'", '\u2019');
-            var array = JSON.parse(escaped_result)[0];
-            for (var i = 0; i < array.length; i++) {
-                nodes[i].appendChild(_.createTextNode(array[i][0].trim()));
+            var translations = JSON.parse(escaped_result)[0];
+            var romajis = translations.pop().pop().split(' ');
+            for (var i = 0; i < nodes.length; i++) {
+                var result = (
+                    texts[i].length == 1?      // words or single katakanas?
+                    romajis[i].toLowerCase():  // show the romaji
+                    translations[i][0].trim()  // show the translation
+                );
+                nodes[i].appendChild(_.createTextNode(result));
             }
         }
     });
@@ -104,9 +111,9 @@ function chunkTranslate(start, end) {
     if (start == end) {
         return;
     }
-    var text  = queue[0].slice(start, end).join('\n');
+    var texts = queue[0].slice(start, end);
     var nodes = queue[1].slice(start, end);
-    return googleTranslate('ja', 'en', text, nodes);
+    return googleTranslate('ja', 'en', texts, nodes);
 }
 
 // Exception handling
