@@ -4,8 +4,12 @@
 // @author      Arnie97
 // @namespace   https://github.com/Arnie97
 // @homepageURL https://github.com/Arnie97/katakana-terminator
+// @icon        https://upload.wikimedia.org/wikipedia/commons/2/28/Ja-Ruby.png
+// @match       *://*/*
+// @grant       GM.xmlHttpRequest
 // @grant       GM_xmlhttpRequest
-// @version     2018.01.02
+// @connect     translate.google.cn
+// @version     2018.03.12
 // @name:ja-JP  カタカナターミネータ
 // @name:zh-CN  片假名终结者
 // @description:zh-CN 在网页中的日语外来语上方标注英文原词
@@ -128,8 +132,14 @@ function main(app_name) {
     } catch (e) {
         console.error(format('{0}: {1}', app_name, e));
     } finally {
-        console.log(format('{0}: {1} items found', app_name, queue[0].length));
+        console.debug(format('{0}: {1} items found', app_name, queue[0].length));
     }
+}
+
+// Polyfill for Greasemonkey 4
+if (typeof GM_xmlhttpRequest === 'undefined' &&
+    typeof GM === 'object' && typeof GM.xmlHttpRequest === 'function') {
+    GM_xmlhttpRequest = GM.xmlHttpRequest;
 }
 
 var queue = [[], []];
