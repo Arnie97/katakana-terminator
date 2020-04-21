@@ -34,7 +34,7 @@ function scanTextNodes(node) {
     } else if (excludeTags.test(node.nodeName)) {
         return;
     } else if (node.hasChildNodes()) {
-        return [].forEach.call(node.childNodes, scanTextNodes);
+        return Array.prototype.slice.call(node.childNodes).forEach(scanTextNodes);
     } else if (node.nodeType == 3) {
         while ((node = addRuby(node)));
     }
