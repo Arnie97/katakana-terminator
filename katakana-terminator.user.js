@@ -8,6 +8,7 @@
 // @match       *://*/*
 // @grant       GM.xmlHttpRequest
 // @grant       GM_xmlhttpRequest
+// @grant       GM_addStyle
 // @connect     translate.google.cn
 // @version     2018.03.12
 // @name:ja-JP  カタカナターミネータ
@@ -49,6 +50,7 @@ function addRuby(node) {
     var ruby = _.createElement('ruby');
     ruby.appendChild(_.createTextNode(match[0]));
     var rt = _.createElement('rt');
+    rt.classList.add('katakana-terminator-rt');
     queue[0].push(match[0]);
     queue[1].push(rt);
     ruby.appendChild(rt);
@@ -99,7 +101,7 @@ function googleTranslate(src, dest, texts, nodes) {
                     romajis[i].toLowerCase():  // show the romaji
                     translations[i][0].trim()  // show the translation
                 );
-                nodes[i].appendChild(_.createTextNode(result));
+                nodes[i].dataset.rt = result;
             }
         }
     });
@@ -120,9 +122,15 @@ function chunkTranslate(start, end) {
     return googleTranslate('ja', 'en', texts, nodes);
 }
 
+// Add our CSS style to page
+function addCss() {
+    GM_addStyle("rt.katakana-terminator-rt::before { content: attr(data-rt); }");
+}
+
 // Exception handling
 function main(app_name) {
     try {
+        addCss();
         scanTextNodes();
         var chunkSize = 200;
         for (var i = 0; i + chunkSize < queue[0].length; i += chunkSize) {
@@ -141,6 +149,20 @@ if (typeof GM_xmlhttpRequest === 'undefined' &&
     typeof GM === 'object' && typeof GM.xmlHttpRequest === 'function') {
     GM_xmlhttpRequest = GM.xmlHttpRequest;
 }
+if (typeof GM_addStyle === 'undefined') {
+    GM_addStyle = (aCss) => {
+        let head = document.getElementsByTagName('head')[0];
+        if (head) {
+            let style = document.createElement('style');
+            style.setAttribute('type', 'text/css');
+            style.textContent = aCss;
+            head.appendChild(style);
+            return style;
+        }
+        return null;
+    };
+}
+
 
 var queue = [[], []];
 main('Katakana Terminator');
