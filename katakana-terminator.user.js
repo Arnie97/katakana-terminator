@@ -150,10 +150,10 @@ if (typeof GM_xmlhttpRequest === 'undefined' &&
     GM_xmlhttpRequest = GM.xmlHttpRequest;
 }
 if (typeof GM_addStyle === 'undefined') {
-    GM_addStyle = (aCss) => {
-        let head = document.getElementsByTagName('head')[0];
+    GM_addStyle = function (aCss) {
+        var head = document.getElementsByTagName('head')[0];
         if (head) {
-            let style = document.createElement('style');
+            var style = document.createElement('style');
             style.setAttribute('type', 'text/css');
             style.textContent = aCss;
             head.appendChild(style);
