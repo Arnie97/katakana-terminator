@@ -51,8 +51,8 @@ function addRuby(node) {
     ruby.appendChild(_.createTextNode(match[0]));
     var rt = _.createElement('rt');
     rt.classList.add('katakana-terminator-rt');
-    queue[0].push(match[0]);
-    queue[1].push(rt);
+    queue[match[0]] = queue[match[0]] || [];
+    queue[match[0]].push(rt);
     ruby.appendChild(rt);
 
     var after = node.splitText(match.index);
@@ -77,7 +77,7 @@ function buildURL(base, params) {
     return base + '?' + query;
 }
 
-function googleTranslate(src, dest, texts, nodes) {
+function googleTranslate(src, dest, texts) {
     var full_text = texts.join('\n').trim();
     var api = 'https://translate.google.cn/translate_a/single';
     var params = {
@@ -95,13 +95,13 @@ function googleTranslate(src, dest, texts, nodes) {
             var escaped_result = dom.responseText.replace("'", '\u2019');
             var translations = JSON.parse(escaped_result)[0];
             var romajis = translations.pop().pop().split(' ');
-            for (var i = 0; i < nodes.length; i++) {
+            for (var i = 0; i < texts.length; i++) {
                 var result = (
                     texts[i].length == 1?      // words or single katakanas?
                     romajis[i].toLowerCase():  // show the romaji
                     translations[i][0].trim()  // show the translation
                 );
-                nodes[i].dataset.rt = result;
+                queue[texts[i]].forEach(function (node) { node.dataset.rt = result; });
             }
         }
     });
@@ -113,13 +113,12 @@ function googleToken(r) {
 }
 
 // Split word list into chunks to limit the length of API requests
-function chunkTranslate(start, end) {
+function chunkTranslate(keys, start, end) {
     if (start == end) {
         return;
     }
-    var texts = queue[0].slice(start, end);
-    var nodes = queue[1].slice(start, end);
-    return googleTranslate('ja', 'en', texts, nodes);
+    var texts = keys.slice(start, end);
+    return googleTranslate('ja', 'en', texts);
 }
 
 // Add our CSS style to page
@@ -132,15 +131,16 @@ function main(app_name) {
     try {
         addCss();
         scanTextNodes();
+        var keys = Object.keys(queue);
         var chunkSize = 200;
-        for (var i = 0; i + chunkSize < queue[0].length; i += chunkSize) {
-            chunkTranslate(i, i + chunkSize);
+        for (var i = 0; i + chunkSize < keys.length; i += chunkSize) {
+            chunkTranslate(keys, i, i + chunkSize);
         }
-        chunkTranslate(i, queue[0].length);
+        chunkTranslate(keys, i, keys.length);
     } catch (e) {
         console.error(format('{0}: {1}', app_name, e));
     } finally {
-        console.debug(format('{0}: {1} items found', app_name, queue[0].length));
+        console.debug(format('{0}: {1} items found', app_name, Object.keys(queue).length));
     }
 }
 
@@ -164,5 +164,5 @@ if (typeof GM_addStyle === 'undefined') {
 }
 
 
-var queue = [[], []];
+var queue = {};
 main('Katakana Terminator');
