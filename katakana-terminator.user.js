@@ -10,7 +10,7 @@
 // @grant       GM_xmlhttpRequest
 // @grant       GM_addStyle
 // @connect     translate.google.cn
-// @version     2018.03.12
+// @version     2020.04.22
 // @name:ja-JP  カタカナターミネータ
 // @name:zh-CN  片假名终结者
 // @description:zh-CN 在网页中的日语外来语上方标注英文原词
