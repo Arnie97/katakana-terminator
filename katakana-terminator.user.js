@@ -43,7 +43,7 @@ function scanTextNodes(node) {
 
 // Inspired by http://www.the-art-of-web.com/javascript/search-highlight/
 function addRuby(node) {
-    var katakana = /[\u30A1-\u30FA\u30FC-\u30FF]+/, match;
+    var katakana = /[\u30A1-\u30FA\u30FD-\u30FF][\u30A1-\u30FF]*[\u30A1-\u30FA\u30FC-\u30FF]/, match;
     if (!node.nodeValue || !(match = katakana.exec(node.nodeValue))) {
         return false;
     }
@@ -94,13 +94,8 @@ function googleTranslate(src, dest, texts) {
         onload: function(dom) {
             var escaped_result = dom.responseText.replace("'", '\u2019');
             var translations = JSON.parse(escaped_result)[0];
-            var romajis = translations.pop().pop().split(' ');
             for (var i = 0; i < texts.length; i++) {
-                var result = (
-                    texts[i].length == 1?      // words or single katakanas?
-                    romajis[i].toLowerCase():  // show the romaji
-                    translations[i][0].trim()  // show the translation
-                );
+                var result = translations[i][0].trim();
                 queue[texts[i]].forEach(function (node) { node.dataset.rt = result; });
             }
         }
