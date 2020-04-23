@@ -6,11 +6,12 @@
 // @homepageURL https://github.com/Arnie97/katakana-terminator
 // @icon        https://upload.wikimedia.org/wikipedia/commons/2/28/Ja-Ruby.png
 // @match       *://*/*
+// @exclude     *://*.bilibili.com/video/*
 // @grant       GM.xmlHttpRequest
 // @grant       GM_xmlhttpRequest
 // @grant       GM_addStyle
 // @connect     translate.google.cn
-// @version     2020.04.22
+// @version     2020.04.23
 // @name:ja-JP  カタカナターミネータ
 // @name:zh-CN  片假名终结者
 // @description:zh-CN 在网页中的日语外来语上方标注英文原词
@@ -146,9 +147,9 @@ if (typeof GM_xmlhttpRequest === 'undefined' &&
 }
 if (typeof GM_addStyle === 'undefined') {
     GM_addStyle = function (aCss) {
-        var head = document.getElementsByTagName('head')[0];
+        var head = _.getElementsByTagName('head')[0];
         if (head) {
-            var style = document.createElement('style');
+            var style = _.createElement('style');
             style.setAttribute('type', 'text/css');
             style.textContent = aCss;
             head.appendChild(style);
@@ -157,7 +158,6 @@ if (typeof GM_addStyle === 'undefined') {
         return null;
     };
 }
-
 
 var queue = {};
 main('Katakana Terminator');
