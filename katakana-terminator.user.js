@@ -44,7 +44,7 @@ function scanTextNodes(node) {
 
 // Inspired by http://www.the-art-of-web.com/javascript/search-highlight/
 function addRuby(node) {
-    var katakana = /[\u30A1-\u30FA\u30FD-\u30FF][\u30A1-\u30FF]*[\u30A1-\u30FA\u30FC-\u30FF]/, match;
+    var katakana = /[\u30A1-\u30FA\u30FD-\u30FF][\u3099\u309A\u30A1-\u30FF]*[\u3099\u309A\u30A1-\u30FA\u30FC-\u30FF]|[\uFF66-\uFF6F\uFF71-\uFF9D][\uFF65-\uFF9F]*[\uFF66-\uFF9F]/, match;
     if (!node.nodeValue || !(match = katakana.exec(node.nodeValue))) {
         return false;
     }
