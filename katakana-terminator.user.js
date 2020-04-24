@@ -11,7 +11,7 @@
 // @grant       GM_xmlhttpRequest
 // @grant       GM_addStyle
 // @connect     translate.google.cn
-// @version     2020.04.23
+// @version     2020.04.24
 // @name:ja-JP  カタカナターミネータ
 // @name:zh-CN  片假名终结者
 // @description:zh-CN 在网页中的日语外来语上方标注英文原词
@@ -44,7 +44,7 @@ function scanTextNodes(node) {
 
 // Inspired by http://www.the-art-of-web.com/javascript/search-highlight/
 function addRuby(node) {
-    var katakana = /[\u30A1-\u30FA\u30FD-\u30FF][\u30A1-\u30FF]*[\u30A1-\u30FA\u30FC-\u30FF]/, match;
+    var katakana = /[\u30A1-\u30FA\u30FD-\u30FF][\u3099\u309A\u30A1-\u30FF]*[\u3099\u309A\u30A1-\u30FA\u30FC-\u30FF]|[\uFF66-\uFF6F\uFF71-\uFF9D][\uFF65-\uFF9F]*[\uFF66-\uFF9F]/, match;
     if (!node.nodeValue || !(match = katakana.exec(node.nodeValue))) {
         return false;
     }
