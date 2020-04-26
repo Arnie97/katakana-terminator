@@ -13,7 +13,7 @@ then [click here to get the user script](https://github.com/Arnie97/katakana-ter
 
 #### Limits 已知缺陷
 *Gairaigo* from other source languages is also converted to English.
-
+    
 即便一组片假名并非源于英语，也会标注为英语中的对应词汇。
 
 #### Thanks 致谢
