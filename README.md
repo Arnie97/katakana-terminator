@@ -1,4 +1,4 @@
-### Katakana Terminator 片假名终结者 カタカナターミネータ
+### Katakana Terminator 片假名终结者 カタカナ‌ターミネーター
 
 #### In a nutshell 简介
 A browser extension to convert *gairaigo* (Japanese loan words) back to English.
