@@ -14,7 +14,7 @@
 // @grant       GM_xmlhttpRequest
 // @grant       GM_addStyle
 // @connect     translate.google.cn
-// @version     2021.05.16
+// @version     2021.05.24
 // @name:ja-JP  カタカナターミネーター
 // @name:zh-CN  片假名终结者
 // @description:zh-CN 在网页中的日语外来语上方标注英文原词
@@ -108,6 +108,11 @@ function translateTextNodes() {
 }
 
 function googleTranslate(srcLang, destLang, phrases) {
+    // Prevent duplicate HTTP requests before the request completes
+    phrases.forEach(function(phrase) {
+        cachedTranslations[phrase] = null;
+    });
+
     var joinedText = phrases.join('\n').trim();
     var api = 'https://translate.google.cn/translate_a/single';
     var params = {
@@ -128,12 +133,22 @@ function googleTranslate(srcLang, destLang, phrases) {
                 cachedTranslations[phrase] = translations[i][0].trim();
                 updateRubyByCachedTranslations(phrase);
             });
-        }
+        },
+        onerror: function() {
+            phrases.forEach(function(phrase) {
+                if (cachedTranslations[phrase]) {
+                    delete cachedTranslations[phrase];
+                }
+            });
+        },
     });
 }
 
 function updateRubyByCachedTranslations(phrase) {
-    queue[phrase].forEach(function (node) {
+    if (!cachedTranslations[phrase]) {
+        return;
+    }
+    (queue[phrase] || []).forEach(function(node) {
         node.dataset.rt = cachedTranslations[phrase];
     });
     delete queue[phrase];
