@@ -191,17 +191,19 @@ if (typeof GM_xmlhttpRequest === 'undefined' &&
     typeof GM === 'object' && typeof GM.xmlHttpRequest === 'function') {
     GM_xmlhttpRequest = GM.xmlHttpRequest;
 }
+
 if (typeof GM_addStyle === 'undefined') {
-    GM_addStyle = function (aCss) {
+    GM_addStyle = function(css) {
         var head = _.getElementsByTagName('head')[0];
-        if (head) {
-            var style = _.createElement('style');
-            style.setAttribute('type', 'text/css');
-            style.textContent = aCss;
-            head.appendChild(style);
-            return style;
+        if (!head) {
+            return null;
         }
-        return null;
+
+        var style = _.createElement('style');
+        style.setAttribute('type', 'text/css');
+        style.textContent = css;
+        head.appendChild(style);
+        return style;
     };
 }
 
