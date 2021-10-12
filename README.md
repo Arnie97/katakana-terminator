@@ -17,6 +17,14 @@ then [click here to get the user script](https://github.com/Arnie97/katakana-ter
 即便一组片假名并非源于英语，也会标注为英语中的对应词汇。
 
 #### Thanks 致谢
-Based on Google Translate. The API tokens are generated with [this project](https://github.com/cocoa520/Google_TK).
+Based on Google Translate. The API token generation algorithm is based on [this project](https://github.com/ssut/py-googletrans/blob/master/googletrans/gtoken.py).
 
-基于谷歌翻译开发，API 令牌依照[此处提供的方法](https://github.com/cocoa520/Google_TK)生成。
+基于谷歌翻译开发，API 令牌依照[此处提供的方法](https://github.com/ssut/py-googletrans/blob/master/googletrans/gtoken.py)生成。
+
+#### Feedback 反馈
+The GitHub issue tracker has been disabled to prevent duplicate comments.
+Please report bugs and issues to [the Greasy Fork feedback page](http://greasyfork.org/scripts/33268/feedback).
+Check whether you could visit [Google Translate](https://translate.google.com) if the extension does not work on your PC.
+
+为避免两边重复发帖，GitHub Issues 现已关闭，敬请[访问 Greasy Fork 反馈您的问题和建议](https://greasyfork.org/zh-CN/scripts/33268-katakana-terminator/feedback)。
+由于众所周知的原因，某些地区有时无法访问[谷歌翻译](https://translate.google.cn)。如果您无法使用此扩展，请先检查能否访问该网站。
