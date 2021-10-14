@@ -15,7 +15,7 @@
 // @grant       GM_addStyle
 // @connect     translate.google.com
 // @connect     translate.google.cn
-// @version     2021.10.12
+// @version     2021.10.14
 // @name:ja-JP  カタカナターミネーター
 // @name:zh-CN  片假名终结者
 // @description:zh-CN 在网页中的日语外来语上方标注英文原词
@@ -108,6 +108,7 @@ function translateTextNodes() {
     console.debug('Katakana Terminator:', phraseCount, 'phrases translated in', apiRequestCount, 'requests, frame', window.location.href);
 }
 
+// Google Dictionary API, https://github.com/ssut/py-googletrans/issues/268
 function googleTranslate(srcLang, destLang, phrases) {
     // Prevent duplicate HTTP requests before the request completes
     phrases.forEach(function(phrase) {
@@ -115,24 +116,25 @@ function googleTranslate(srcLang, destLang, phrases) {
     });
 
     var joinedText = phrases.join('\n').trim(),
-        api = 'https://translate.google.cn/translate_a/single',
+        api = 'https://translate.google.cn/translate_a/t',
         params = {
-            client: 't',
+            client: 'dict-chrome-ex',
             sl: srcLang,
             tl: destLang,
-            dt: ['rm', 't'],
-            tk: googleToken(joinedText),
             q: joinedText,
         };
     GM_xmlhttpRequest({
         method: "GET",
         url: buildURL(api, params),
         onload: function(dom) {
-            var escapedResult = dom.responseText.replace("'", '\u2019'),
-                translations = JSON.parse(escapedResult)[0];
-            phrases.forEach(function(phrase, i) {
-                cachedTranslations[phrase] = translations[i][0].trim();
-                updateRubyByCachedTranslations(phrase);
+            JSON.parse(dom.responseText)['sentences'].forEach(function(s) {
+                if (!s.hasOwnProperty('orig')) {
+                    return;
+                }
+                var original = s.orig.trim(),
+                    translated = s.trans.trim();
+                cachedTranslations[original] = translated;
+                updateRubyByCachedTranslations(original);
             });
         },
         onerror: function() {
@@ -153,61 +155,6 @@ function updateRubyByCachedTranslations(phrase) {
         node.dataset.rt = cachedTranslations[phrase];
     });
     delete queue[phrase];
-}
-
-// Based on https://github.com/ssut/py-googletrans/blob/master/googletrans/gtoken.py
-function googleToken(text) {
-    var tkk = "436443.3778881810".split('.').map(Number),
-        byteArray = utf16ToUTF8(text);
-    for (var n = tkk[0], i = 0; i < byteArray.length; i++) {
-        n = xorShift(n + byteArray[i], "+-a^+6");
-    }
-    n = xorShift(n, "+-3^+b+-f") ^ tkk[1];
-    if (n < 0) {
-        n = (n & 0x7FFFFFFF) + 0x80000000;
-    }
-    n %= 1E6;
-    return n.toString() + "." + (n ^ tkk[0]);
-}
-
-function xorShift(n, instructions) {
-    for (var i = 0; i < instructions.length - 2; i += 3) {
-        var base32 = instructions[i + 2],
-            bit = base32 >= "a" ? base32.charCodeAt(0) - 87 : Number(base32),
-            shift = instructions[i + 1] === "+" ? (n >>> bit) : (n << bit);
-        n = instructions[i] === "+" ? (n + shift & 0xFFFFFFFF) : (n ^ shift);
-    }
-    return n;
-}
-
-function utf16ToUTF8(text) {
-    var results = [];
-    for (var i = 0; i < text.length; i++) {
-        var c = text.charCodeAt(i);
-
-        if (c < 0x80) {
-            // 1 byte
-            results.push(c);
-        } else if (c < 0x0800) {
-            // 2 bytes
-            results.push(0xC0 | c >> 06);
-            results.push(0x80 | c >> 00 & 0x3F);
-        } else if ((c & 0xFC00) === 0xD800 && i + 1 < text.length && (text.charCodeAt(i + 1) & 0xFC00) == 0xDC00) {
-            // 4 bytes
-            // convert surrogate pair to UCS-4 codepoint
-            c = 0x10000 + ((c & 0x03FF) << 10) + (text.charCodeAt(++i) & 0x03FF);
-            results.push(0xF0 | c >> 18);
-            results.push(0x80 | c >> 12 & 0x3F);
-            results.push(0x80 | c >> 06 & 0x3F);
-            results.push(0x80 | c >> 00 & 0x3F);
-        } else {
-            // 3 bytes
-            results.push(0xE0 | c >> 12);
-            results.push(0x80 | c >> 06 & 0x3F);
-            results.push(0x80 | c >> 00 & 0x3F);
-        }
-    }
-    return results;
 }
 
 function main() {

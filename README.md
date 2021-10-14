@@ -17,9 +17,9 @@ then [click here to get the user script](https://github.com/Arnie97/katakana-ter
 即便一组片假名并非源于英语，也会标注为英语中的对应词汇。
 
 #### Thanks 致谢
-Based on Google Translate. The API token generation algorithm is based on [this project](https://github.com/ssut/py-googletrans/blob/master/googletrans/gtoken.py).
+Based on the Google Translate API, which was described in [this post](https://github.com/ssut/py-googletrans/issues/268).
 
-基于谷歌翻译开发，API 令牌依照[此处提供的方法](https://github.com/ssut/py-googletrans/blob/master/googletrans/gtoken.py)生成。
+基于谷歌翻译开发，[API 参考此处](https://github.com/ssut/py-googletrans/issues/268)。
 
 #### Feedback 反馈
 The GitHub issue tracker has been disabled to prevent duplicate comments.
