@@ -15,7 +15,7 @@
 // @grant       GM_addStyle
 // @connect     translate.google.com
 // @connect     translate.google.cn
-// @version     2021.12.20
+// @version     2021.12.21
 // @name:ja-JP  カタカナターミネーター
 // @name:zh-CN  片假名终结者
 // @description:zh-CN 在网页中的日语外来语上方标注英文原词
@@ -26,12 +26,19 @@ var _ = document;
 
 var queue = {};  // {"カタカナ": [rtNodeA, rtNodeB]}
 var cachedTranslations = {};  // {"ターミネーター": "Terminator"}
+var newNodes = [_.body];
 
+// Recursively traverse the given node and its descendants (Depth-first search)
 function scanTextNodes(node) {
+    // The node could have been detached from the DOM tree
+    if (!node.parentNode || !_.body.contains(node)) {
+        return;
+    }
+
+    // Ignore text boxes and echoes
     var excludeTags = {ruby: true, script: true, select: true, textarea: true};
 
     switch (node.nodeType) {
-
     case Node.ELEMENT_NODE:
         if (node.tagName.toLowerCase() in excludeTags || node.isContentEditable) {
             return;
@@ -43,6 +50,7 @@ function scanTextNodes(node) {
     }
 }
 
+// Recursively add ruby tags to text nodes
 // Inspired by http://www.the-art-of-web.com/javascript/search-highlight/
 function addRuby(node) {
     var katakana = /[\u30A1-\u30FA\u30FD-\u30FF][\u3099\u309A\u30A1-\u30FF]*[\u3099\u309A\u30A1-\u30FA\u30FC-\u30FF]|[\uFF66-\uFF6F\uFF71-\uFF9D][\uFF65-\uFF9F]*[\uFF66-\uFF9F]/, match;
@@ -53,11 +61,14 @@ function addRuby(node) {
     ruby.appendChild(_.createTextNode(match[0]));
     var rt = _.createElement('rt');
     rt.classList.add('katakana-terminator-rt');
-
-    queue[match[0]] = queue[match[0]] || [];
-    queue[match[0]].push(rt);
     ruby.appendChild(rt);
 
+    // Append the ruby title node to the pending-translation queue
+    queue[match[0]] = queue[match[0]] || [];
+    queue[match[0]].push(rt);
+
+    // <span>[startカナmiddleテストend]</span> =>
+    // <span>start<ruby>カナ<rt data-rt="Kana"></rt></ruby>[middleテストend]</span>
     var after = node.splitText(match.index);
     node.parentNode.insertBefore(ruby, after);
     after.nodeValue = after.nodeValue.substring(match[0].length);
@@ -143,6 +154,7 @@ function googleTranslate(srcLang, destLang, phrases) {
     });
 }
 
+// Clear the pending-translation queue
 function updateRubyByCachedTranslations(phrase) {
     if (!cachedTranslations[phrase]) {
         return;
@@ -153,25 +165,31 @@ function updateRubyByCachedTranslations(phrase) {
     delete queue[phrase];
 }
 
+// Watch newly added DOM nodes, and save them for later use
+function mutationHandler(mutationList) {
+    mutationList.forEach(function(mutationRecord) {
+        mutationRecord.addedNodes.forEach(function(node) {
+            newNodes.push(node);
+        });
+    });
+}
+
 function main() {
     GM_addStyle("rt.katakana-terminator-rt::before { content: attr(data-rt); }");
 
-    var domChangedSinceLastScan = true;
-    var observer = new MutationObserver(function() {
-        domChangedSinceLastScan = true;
-    });
+    var observer = new MutationObserver(mutationHandler);
     observer.observe(_.body, {childList: true, subtree: true});
 
     function rescanTextNodes() {
-        if (!domChangedSinceLastScan) {
+        // Deplete buffered mutations
+        mutationHandler(observer.takeRecords());
+        if (!newNodes.length) {
             return;
         }
 
-        // Deplete buffered mutations
-        observer.takeRecords();
-        domChangedSinceLastScan = false;
-
-        scanTextNodes(_.body);
+        console.debug('Katakana Terminator:', newNodes.length, 'new nodes were added, frame', window.location.href);
+        newNodes.forEach(scanTextNodes);
+        newNodes.splice(0);
         translateTextNodes();
     }
 
