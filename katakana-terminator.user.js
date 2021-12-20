@@ -15,7 +15,7 @@
 // @grant       GM_addStyle
 // @connect     translate.google.com
 // @connect     translate.google.cn
-// @version     2021.10.14
+// @version     2021.12.20
 // @name:ja-JP  カタカナターミネーター
 // @name:zh-CN  片假名终结者
 // @description:zh-CN 在网页中的日语外来语上方标注英文原词
@@ -27,14 +27,18 @@ var _ = document;
 var queue = {};  // {"カタカナ": [rtNodeA, rtNodeB]}
 var cachedTranslations = {};  // {"ターミネーター": "Terminator"}
 
-// Inspired by https://www.the-art-of-web.com/javascript/search-highlight/
 function scanTextNodes(node) {
     var excludeTags = {ruby: true, script: true, select: true, textarea: true};
-    if (node.nodeName.toLowerCase() in excludeTags) {
-        return;
-    } else if (node.hasChildNodes()) {
-        return Array.prototype.slice.call(node.childNodes).forEach(scanTextNodes);
-    } else if (node.nodeType == 3) {
+
+    switch (node.nodeType) {
+
+    case Node.ELEMENT_NODE:
+        if (node.tagName.toLowerCase() in excludeTags || node.isContentEditable) {
+            return;
+        }
+        return node.childNodes.forEach(scanTextNodes);
+
+    case Node.TEXT_NODE:
         while ((node = addRuby(node)));
     }
 }
@@ -49,6 +53,7 @@ function addRuby(node) {
     ruby.appendChild(_.createTextNode(match[0]));
     var rt = _.createElement('rt');
     rt.classList.add('katakana-terminator-rt');
+
     queue[match[0]] = queue[match[0]] || [];
     queue[match[0]].push(rt);
     ruby.appendChild(rt);
@@ -57,22 +62,6 @@ function addRuby(node) {
     node.parentNode.insertBefore(ruby, after);
     after.nodeValue = after.nodeValue.substring(match[0].length);
     return after;
-}
-
-// Forked from https://stackoverflow.com/a/34209399
-function buildURL(base, params) {
-    var query = Object.keys(params).map(function(k) {
-        var esc = encodeURIComponent;
-        // Support arrays in parameters, just like Python Requests
-        // {keyA: 1, keyB: [2, 3]} => '?keyA=1&keyB=2&keyB=3'
-        if (params[k] instanceof Array) {
-            return params[k].map(function(v) {
-                return esc(k) + '=' + esc(v);
-            }).join('&');
-        }
-        return esc(k) + '=' + esc(params[k]);
-    }).join('&');
-    return base + '?' + query;
 }
 
 // Split word list into chunks to limit the length of API requests
@@ -108,6 +97,13 @@ function translateTextNodes() {
     console.debug('Katakana Terminator:', phraseCount, 'phrases translated in', apiRequestCount, 'requests, frame', window.location.href);
 }
 
+// {"keyA": 1, "keyB": 2} => "?keyA=1&keyB=2"
+function buildQueryString(params) {
+    return '?' + Object.keys(params).map(function(k) {
+        return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+    }).join('&');
+}
+
 // Google Dictionary API, https://github.com/ssut/py-googletrans/issues/268
 function googleTranslate(srcLang, destLang, phrases) {
     // Prevent duplicate HTTP requests before the request completes
@@ -125,9 +121,9 @@ function googleTranslate(srcLang, destLang, phrases) {
         };
     GM_xmlhttpRequest({
         method: "GET",
-        url: buildURL(api, params),
+        url: api + buildQueryString(params),
         onload: function(dom) {
-            JSON.parse(dom.responseText)['sentences'].forEach(function(s) {
+            JSON.parse(dom.responseText).sentences.forEach(function(s) {
                 if (!s.hasOwnProperty('orig')) {
                     return;
                 }
@@ -202,6 +198,16 @@ if (typeof GM_addStyle === 'undefined') {
         style.textContent = css;
         head.appendChild(style);
         return style;
+    };
+}
+
+// Polyfill for ES5
+if (typeof NodeList.prototype.forEach === 'undefined') {
+    NodeList.prototype.forEach = function(callback, thisArg) {
+        thisArg = thisArg || window;
+        for (var i = 0; i < this.length; i++) {
+            callback.call(thisArg, this[i], i, this);
+        }
     };
 }
 
