@@ -15,7 +15,7 @@
 // @grant       GM_addStyle
 // @connect     translate.google.com
 // @connect     translate.google.cn
-// @version     2021.12.21
+// @version     2022.01.05
 // @name:ja-JP  カタカナターミネーター
 // @name:zh-CN  片假名终结者
 // @description:zh-CN 在网页中的日语外来语上方标注英文原词
@@ -81,11 +81,8 @@ function translateTextNodes() {
     var phraseCount = 0;
     var chunkSize = 200;
     var chunk = [];
-    for (var phrase in queue) {
-        if (!queue.hasOwnProperty(phrase)) {
-            continue;
-        }
 
+    for (var phrase in queue) {
         phraseCount++;
         if (phrase in cachedTranslations) {
             updateRubyByCachedTranslations(phrase);
@@ -105,7 +102,9 @@ function translateTextNodes() {
         googleTranslate('ja', 'en', chunk);
     }
 
-    console.debug('Katakana Terminator:', phraseCount, 'phrases translated in', apiRequestCount, 'requests, frame', window.location.href);
+    if (phraseCount) {
+        console.debug('Katakana Terminator:', phraseCount, 'phrases translated in', apiRequestCount, 'requests, frame', window.location.href);
+    }
 }
 
 // {"keyA": 1, "keyB": 2} => "?keyA=1&keyB=2"
@@ -135,20 +134,13 @@ function googleTranslate(srcLang, destLang, phrases) {
         url: api + buildQueryString(params),
         onload: function(dom) {
             JSON.parse(dom.responseText).sentences.forEach(function(s) {
-                if (!s.hasOwnProperty('orig')) {
+                if (!s.orig) {
                     return;
                 }
                 var original = s.orig.trim(),
                     translated = s.trans.trim();
                 cachedTranslations[original] = translated;
                 updateRubyByCachedTranslations(original);
-            });
-        },
-        onerror: function() {
-            phrases.forEach(function(phrase) {
-                if (cachedTranslations[phrase]) {
-                    delete cachedTranslations[phrase];
-                }
             });
         },
     });
@@ -189,7 +181,7 @@ function main() {
 
         console.debug('Katakana Terminator:', newNodes.length, 'new nodes were added, frame', window.location.href);
         newNodes.forEach(scanTextNodes);
-        newNodes.splice(0);
+        newNodes.length = 0;
         translateTextNodes();
     }
 
