@@ -14,6 +14,7 @@
 // @grant       GM_xmlhttpRequest
 // @grant       GM_addStyle
 // @connect     translate.google.com
+// @connect     translate.googleapis.com
 // @connect     translate.google.cn
 // @version     2022.01.05
 // @name:ja-JP  カタカナターミネーター
@@ -122,9 +123,10 @@ function googleTranslate(srcLang, destLang, phrases) {
     });
 
     var joinedText = phrases.join('\n').trim(),
-        api = 'https://translate.google.cn/translate_a/t',
+        api = 'https://translate.googleapis.com/translate_a/single',
         params = {
-            client: 'dict-chrome-ex',
+            client: 'gtx',
+            dt: "t",
             sl: srcLang,
             tl: destLang,
             q: joinedText,
@@ -133,12 +135,14 @@ function googleTranslate(srcLang, destLang, phrases) {
         method: "GET",
         url: api + buildQueryString(params),
         onload: function(dom) {
-            JSON.parse(dom.responseText).sentences.forEach(function(s) {
-                if (!s.orig) {
-                    return;
-                }
-                var original = s.orig.trim(),
-                    translated = s.trans.trim();
+            console.log(dom.responseText)
+            let resu = JSON.parse(dom.responseText)
+            console.log(resu)
+            resu[0].forEach(function(item) {
+                console.log(item)
+                let translated = item[0].replace(/\r|\n/ig,"");
+                let original = item[1].replace(/\r|\n/ig,"");
+
                 cachedTranslations[original] = translated;
                 updateRubyByCachedTranslations(original);
             });
