@@ -13,9 +13,10 @@
 // @grant       GM.xmlHttpRequest
 // @grant       GM_xmlhttpRequest
 // @grant       GM_addStyle
-// @connect     translate.google.com
 // @connect     translate.google.cn
-// @version     2022.02.18
+// @connect     translate.google.com
+// @connect     translate.googleapis.com
+// @version     2022.02.19
 // @name:ja-JP  カタカナターミネーター
 // @name:zh-CN  片假名终结者
 // @description:zh-CN 在网页中的日语外来语上方标注英文原词
@@ -92,14 +93,14 @@ function translateTextNodes() {
         chunk.push(phrase);
         if (chunk.length >= chunkSize) {
             apiRequestCount++;
-            googleTranslate('ja', 'en', chunk);
+            translate(chunk, apiList);
             chunk = [];
         }
     }
 
     if (chunk.length) {
         apiRequestCount++;
-        googleTranslate('ja', 'en', chunk);
+        translate(chunk, apiList);
     }
 
     if (phraseCount) {
@@ -114,27 +115,79 @@ function buildQueryString(params) {
     }).join('&');
 }
 
-// Google Dictionary API, https://github.com/ssut/py-googletrans/issues/268
-function googleTranslate(srcLang, destLang, phrases) {
+function translate(phrases, remainingApiList) {
+    if (!remainingApiList.length) {
+        console.error('Katakana Terminator: fallbacks exhausted', phrases);
+        phrases.forEach(function(phrase) {
+            delete cachedTranslations[phrase];
+        });
+    }
+
     // Prevent duplicate HTTP requests before the request completes
     phrases.forEach(function(phrase) {
         cachedTranslations[phrase] = null;
     });
 
-    var joinedText = phrases.join('\n').trim(),
-        api = 'https://translate.google.cn/translate_a/t',
-        params = {
-            client: 'dict-chrome-ex',
-            sl: srcLang,
-            tl: destLang,
-            q: joinedText,
-        };
+    var api = remainingApiList[0];
     GM_xmlhttpRequest({
         method: "GET",
-        url: api + buildQueryString(params),
+        url: 'https://' + api.hosts[0] + api.path + buildQueryString(api.params(phrases)),
         onload: function(dom) {
-            var resp = JSON.parse(dom.responseText);
+            try {
+                api.callback(phrases, JSON.parse(dom.responseText.replace("'", '\u2019')));
+            } catch (err) {
+                console.error('Katakana Terminator: invalid response', err, dom.responseText);
+                return translate(phrases, remainingApiList.slice(1));
+            }
+        },
+        onerror: function() {
+            console.error('Katakana Terminator: request error', api.url);
+            return translate(phrases, remainingApiList.slice(1));
+        },
+    });
+}
 
+var apiList = [
+    {
+        // https://github.com/Arnie97/katakana-terminator/pull/8
+        name: 'Google Translate',
+        hosts: ['translate.googleapis.com'],
+        path: '/translate_a/single',
+        params: function(phrases) {
+            var joinedText = phrases.join('\n').replace(/\s+$/, '');
+            return {
+                sl: 'ja',
+                tl: 'en',
+                dt: 't',
+                client: 'gtx',
+                q: joinedText,
+            };
+        },
+        callback: function(phrases, resp) {
+            resp[0].forEach(function(item) {
+                var translated = item[0].replace(/\s+$/, ''),
+                    original   = item[1].replace(/\s+$/, '');
+                cachedTranslations[original] = translated;
+                updateRubyByCachedTranslations(original);
+            });
+        },
+    },
+    {
+        // https://github.com/ssut/py-googletrans/issues/268
+        name: 'Google Dictionary',
+        hosts: ['translate.google.cn'],
+        path: '/translate_a/t',
+        params: function(phrases) {
+            var joinedText = phrases.join('\n').replace(/\s+$/, '');
+            return {
+                sl: 'ja',
+                tl: 'en',
+                dt: 't',
+                client: 'dict-chrome-ex',
+                q: joinedText,
+            };
+        },
+        callback: function(phrases, resp) {
             // ["katakana\nterminator"]
             if (!resp.sentences) {
                 var translated = resp[0].split('\n');
@@ -159,8 +212,8 @@ function googleTranslate(srcLang, destLang, phrases) {
                 updateRubyByCachedTranslations(original);
             });
         },
-    });
-}
+    },
+];
 
 // Clear the pending-translation queue
 function updateRubyByCachedTranslations(phrase) {
