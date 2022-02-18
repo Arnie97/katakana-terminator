@@ -13,8 +13,7 @@
 // @grant       GM.xmlHttpRequest
 // @grant       GM_xmlhttpRequest
 // @grant       GM_addStyle
-// @connect     translate.google.com
-// @connect     translate.google.cn
+// @connect     translate.googleapis.com
 // @version     2022.02.18
 // @name:ja-JP  カタカナターミネーター
 // @name:zh-CN  片假名终结者
@@ -121,43 +120,35 @@ function googleTranslate(srcLang, destLang, phrases) {
         cachedTranslations[phrase] = null;
     });
 
-    var joinedText = phrases.join('\n').trim(),
-        api = 'https://translate.google.cn/translate_a/t',
+    var joinedText = phrases.join('\n').replace(/\s+$/, ''),
+        api = 'https://translate.googleapis.com/translate_a/single',
         params = {
-            client: 'dict-chrome-ex',
+            client: 'gtx',
+            dt: 't',
             sl: srcLang,
             tl: destLang,
             q: joinedText,
         };
+
     GM_xmlhttpRequest({
         method: "GET",
         url: api + buildQueryString(params),
         onload: function(dom) {
-            var resp = JSON.parse(dom.responseText);
-
-            // ["katakana\nterminator"]
-            if (!resp.sentences) {
-                var translated = resp[0].split('\n');
-                if (translated.length !== phrases.length) {
-                    throw [phrases, resp];
-                }
-                translated.forEach(function(trans, i) {
-                    var orig = phrases[i];
-                    cachedTranslations[orig] = trans;
-                    updateRubyByCachedTranslations(orig);
-                });
+            try {
+                var resp = JSON.parse(dom.responseText.replace("'", '\u2019'));
+            } catch (err) {
+                console.error('Katakana Terminator: invalid response', dom.responseText);
                 return;
             }
-
-            resp.sentences.forEach(function(s) {
-                if (!s.orig) {
-                    return;
-                }
-                var original = s.orig.trim(),
-                    translated = s.trans.trim();
+            resp[0].forEach(function(item) {
+                var translated = item[0].replace(/\s+$/, ''),
+                    original   = item[1].replace(/\s+$/, '');
                 cachedTranslations[original] = translated;
                 updateRubyByCachedTranslations(original);
             });
+        },
+        onerror: function(dom) {
+            console.error('Katakana Terminator: request error', dom.statusText);
         },
     });
 }
