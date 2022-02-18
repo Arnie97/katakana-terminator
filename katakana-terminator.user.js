@@ -15,7 +15,7 @@
 // @grant       GM_addStyle
 // @connect     translate.google.com
 // @connect     translate.google.cn
-// @version     2022.01.05
+// @version     2022.02.18
 // @name:ja-JP  カタカナターミネーター
 // @name:zh-CN  片假名终结者
 // @description:zh-CN 在网页中的日语外来语上方标注英文原词
@@ -133,7 +133,23 @@ function googleTranslate(srcLang, destLang, phrases) {
         method: "GET",
         url: api + buildQueryString(params),
         onload: function(dom) {
-            JSON.parse(dom.responseText).sentences.forEach(function(s) {
+            var resp = JSON.parse(dom.responseText);
+
+            // ["katakana\nterminator"]
+            if (!resp.sentences) {
+                var translated = resp[0].split('\n');
+                if (translated.length !== phrases.length) {
+                    throw [phrases, resp];
+                }
+                translated.forEach(function(trans, i) {
+                    var orig = phrases[i];
+                    cachedTranslations[orig] = trans;
+                    updateRubyByCachedTranslations(orig);
+                });
+                return;
+            }
+
+            resp.sentences.forEach(function(s) {
                 if (!s.orig) {
                     return;
                 }
