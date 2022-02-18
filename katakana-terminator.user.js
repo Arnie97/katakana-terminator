@@ -115,8 +115,8 @@ function buildQueryString(params) {
     }).join('&');
 }
 
-function translate(phrases, remainingApiList) {
-    if (!remainingApiList.length) {
+function translate(phrases) {
+    if (!apiList.length) {
         console.error('Katakana Terminator: fallbacks exhausted', phrases);
         phrases.forEach(function(phrase) {
             delete cachedTranslations[phrase];
@@ -128,7 +128,7 @@ function translate(phrases, remainingApiList) {
         cachedTranslations[phrase] = null;
     });
 
-    var api = remainingApiList[0];
+    var api = apiList[0];
     GM_xmlhttpRequest({
         method: "GET",
         url: 'https://' + api.hosts[0] + api.path + buildQueryString(api.params(phrases)),
@@ -137,12 +137,14 @@ function translate(phrases, remainingApiList) {
                 api.callback(phrases, JSON.parse(dom.responseText.replace("'", '\u2019')));
             } catch (err) {
                 console.error('Katakana Terminator: invalid response', err, dom.responseText);
-                return translate(phrases, remainingApiList.slice(1));
+                apiList.shift();
+                return translate(phrases);
             }
         },
         onerror: function() {
             console.error('Katakana Terminator: request error', api.url);
-            return translate(phrases, remainingApiList.slice(1));
+            apiList.shift();
+            return translate(phrases);
         },
     });
 }
