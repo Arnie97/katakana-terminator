@@ -61,6 +61,7 @@ function addRuby(node) {
     var ruby = _.createElement('ruby');
     ruby.appendChild(_.createTextNode(match[0]));
     var rt = _.createElement('rt');
+    rt.setAttribute('style', 'font-size: 60%');
     rt.classList.add('katakana-terminator-rt');
     ruby.appendChild(rt);
 
