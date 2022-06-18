@@ -59,7 +59,7 @@ function addRuby(node) {
         return false;
     }
     var ruby = _.createElement('ruby');
-    ruby.style.background = 'rgba(170, 221, 204, 0.4)'
+    ruby.style.background = 'rgba(184, 224, 212, 0.25)'
     ruby.appendChild(_.createTextNode(match[0]));
     var rt = _.createElement('rt');
     rt.classList.add('katakana-terminator-rt');
