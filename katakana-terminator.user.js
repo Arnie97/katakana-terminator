@@ -3,7 +3,7 @@
 // @description Convert gairaigo (Japanese loan words) back to English
 // @author      Arnie97
 // @license     MIT
-// @copyright   2017-2021, Katakana Terminator Contributors (https://github.com/Arnie97/katakana-terminator/graphs/contributors)
+// @copyright   2017-2024, Katakana Terminator Contributors (https://github.com/Arnie97/katakana-terminator/graphs/contributors)
 // @namespace   https://github.com/Arnie97
 // @homepageURL https://github.com/Arnie97/katakana-terminator
 // @supportURL  https://greasyfork.org/scripts/33268/feedback
@@ -16,7 +16,7 @@
 // @connect     translate.google.cn
 // @connect     translate.google.com
 // @connect     translate.googleapis.com
-// @version     2022.02.19
+// @version     2024.05.05
 // @name:ja-JP  カタカナターミネーター
 // @name:zh-CN  片假名终结者
 // @description:zh-CN 在网页中的日语外来语上方标注英文原词
