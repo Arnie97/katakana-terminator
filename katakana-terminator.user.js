@@ -44,7 +44,7 @@ function scanTextNodes(node) {
         if (node.tagName.toLowerCase() in excludeTags || node.isContentEditable) {
             return;
         }
-        return node.childNodes.forEach(scanTextNodes);
+        return Array.from(node.childNodes).forEach(scanTextNodes);
 
     case Node.TEXT_NODE:
         while ((node = addRuby(node)));
