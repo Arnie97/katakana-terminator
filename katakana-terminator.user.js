@@ -47,7 +47,7 @@ function scanTextNodes(node) {
         return Array.from(node.childNodes).forEach(scanTextNodes);
 
     case Node.TEXT_NODE:
-        if (plainPhrases.has(node)) {
+        if (rubyLineBreaker && rubyLineBreaker.holds(node)) {
             return;
         }
         while ((node = addRuby(node)));
@@ -61,10 +61,9 @@ function addRuby(node) {
     if (!node.nodeValue || !(match = katakana.exec(node.nodeValue))) {
         return false;
     }
-    if (!rubyBreaksNatively) {
-        // Leave the phrase as a plain text node until layoutPhrases() knows where its lines break
-        var phrase = node.splitText(match.index);
-        plainPhrases.add(phrase);
+    if (rubyLineBreaker) {
+        // Leave the phrase as a plain text node until RubyLineBreaker knows where its lines break
+        var phrase = rubyLineBreaker.hold(node.splitText(match.index));
         queue[match[0]] = queue[match[0]] || [];
         queue[match[0]].push(phrase);
         return phrase.splitText(match[0].length);
@@ -91,89 +90,115 @@ function addRuby(node) {
 // so a long phrase overflows narrow boxes. In such browsers, keep each phrase as plain text until its
 // translation arrives, then emit one ruby per line, dividing the annotation at word boundaries
 // as Chrome 128+ does natively.
-var rubyBreaksNatively;
-var plainPhrases = new WeakSet();
-var pendingPhrases = [];
-
-// Measure a test ruby inside a shadow root, so that page styles neither reach it nor match against it
-function detectBreakableRuby() {
-    var host = _.createElement('div'), ruby = _.createElement('ruby'), rt = _.createElement('rt');
-    host.style.cssText = 'all: initial; display: block; position: absolute; visibility: hidden; width: 0';
-    ruby.textContent = 'アイウエオ';
-    rt.textContent = 'a b c';
-    ruby.appendChild(rt);
-    host.attachShadow({mode: 'closed'}).appendChild(ruby);
-    _.documentElement.appendChild(host);
-    rubyBreaksNatively = ruby.getClientRects().length > 1;
-    host.remove();
-}
-
-function scheduleLayout(phrases) {
-    if (!phrases.length) {
-        return;
+class RubyLineBreaker {
+    // Measure a test ruby inside a shadow root, so that page styles neither reach it nor match against it
+    static isNeeded() {
+        var host = _.createElement('div'), ruby = _.createElement('ruby'), rt = _.createElement('rt');
+        host.style.cssText = 'all: initial; display: block; position: absolute; visibility: hidden; width: 0';
+        ruby.textContent = 'アイウエオ';
+        rt.textContent = 'a b c';
+        ruby.appendChild(rt);
+        host.attachShadow({mode: 'closed'}).appendChild(ruby);
+        _.documentElement.appendChild(host);
+        var breaksNatively = ruby.getClientRects().length > 1;
+        host.remove();
+        return !breaksNatively;
     }
-    if (!pendingPhrases.length) {
-        requestAnimationFrame(function() {
-            layoutPhrases(Array.from(new Set(pendingPhrases.splice(0))));
+
+    constructor() {
+        this.plainPhrases = new WeakSet();
+        this.pending = [];
+        this.resizing = false;
+
+        // Line breaks move when the page width changes
+        window.addEventListener('resize', () => {
+            if (!this.resizing) {
+                this.resizing = true;
+                requestAnimationFrame(() => {
+                    this.resizing = false;
+                    this.relayout();
+                });
+            }
         });
     }
-    pendingPhrases.push.apply(pendingPhrases, phrases);
-}
 
-// Replace plain text phrases with one ruby per line
-function layoutPhrases(phrases) {
-    // The page may have detached or rewritten a phrase while its translation was pending
-    phrases = phrases.filter(function(phrase) {
-        return phrase.isConnected && cachedTranslations[phrase.nodeValue];
-    });
-    // Measure everything before changing anything, so that measuring costs a single reflow
-    phrases.map(lineStarts).forEach(function(starts, i) {
-        var base = phrases[i].nodeValue, words = cachedTranslations[base].split(' ');
-        phrases[i].replaceWith.apply(phrases[i], starts.map(function(start, j) {
-            var end = starts[j + 1] || base.length;
-            var ruby = _.createElement('ruby'), rt = _.createElement('rt');
-            ruby.textContent = base.slice(start, end);
-            rt.classList.add('katakana-terminator-rt');
-            rt.dataset.rt = words.slice(Math.round(words.length * start / base.length), Math.round(words.length * end / base.length)).join(' ');
-            rt.dataset.part = j;
-            ruby.appendChild(rt);
-            return ruby;
-        }));
-    });
-}
+    // Mark a text node as a phrase waiting for its rubies
+    hold(phrase) {
+        this.plainPhrases.add(phrase);
+        return phrase;
+    }
 
-// Offsets in the text node where a new line begins
-function lineStarts(text) {
-    var range = _.createRange(), starts = [], top;
-    for (var i = 0; i < text.length; i++) {
-        range.setStart(text, i);
-        range.setEnd(text, i + 1);
-        var rect = range.getBoundingClientRect();
-        if (!starts.length || Math.abs(rect.top - top) > 1) {
-            starts.push(i);
-            top = rect.top;
+    holds(node) {
+        return this.plainPhrases.has(node);
+    }
+
+    schedule(phrases) {
+        if (!phrases.length) {
+            return;
         }
+        if (!this.pending.length) {
+            requestAnimationFrame(() => {
+                this.layout(Array.from(new Set(this.pending.splice(0))));
+            });
+        }
+        this.pending.push(...phrases);
     }
-    return starts;
+
+    // Replace plain text phrases with one ruby per line
+    layout(phrases) {
+        // The page may have detached or rewritten a phrase while its translation was pending
+        phrases = phrases.filter((phrase) => phrase.isConnected && cachedTranslations[phrase.nodeValue]);
+        // Measure everything before changing anything, so that measuring costs a single reflow
+        phrases.map(RubyLineBreaker.lineStarts).forEach((starts, i) => {
+            var base = phrases[i].nodeValue, words = cachedTranslations[base].split(' ');
+            phrases[i].replaceWith(...starts.map((start, j) => {
+                var end = starts[j + 1] || base.length;
+                var ruby = _.createElement('ruby'), rt = _.createElement('rt');
+                ruby.textContent = base.slice(start, end);
+                rt.classList.add('katakana-terminator-rt');
+                rt.dataset.rt = words.slice(Math.round(words.length * start / base.length), Math.round(words.length * end / base.length)).join(' ');
+                rt.dataset.part = j;
+                ruby.appendChild(rt);
+                return ruby;
+            }));
+        });
+    }
+
+    // Offsets in the text node where a new line begins
+    static lineStarts(text) {
+        var range = _.createRange(), starts = [], top;
+        for (var i = 0; i < text.length; i++) {
+            range.setStart(text, i);
+            range.setEnd(text, i + 1);
+            var rect = range.getBoundingClientRect();
+            if (!starts.length || Math.abs(rect.top - top) > 1) {
+                starts.push(i);
+                top = rect.top;
+            }
+        }
+        return starts;
+    }
+
+    // Turn the rubies emitted by layout() for one phrase back into a plain text phrase
+    merge(firstRt) {
+        var ruby = firstRt.parentNode, base = ruby.firstChild.nodeValue, next;
+        while ((next = ruby.nextSibling) && next.lastChild && next.lastChild.classList &&
+               next.lastChild.classList.contains('katakana-terminator-rt') && next.lastChild.dataset.part > 0) {
+            base += next.firstChild.nodeValue;
+            next.remove();
+        }
+        var phrase = this.hold(_.createTextNode(base));
+        ruby.replaceWith(phrase);
+        return phrase;
+    }
+
+    relayout() {
+        this.layout(Array.from(_.querySelectorAll('rt.katakana-terminator-rt[data-part="0"]'), (rt) => this.merge(rt)));
+    }
 }
 
-// Turn the rubies emitted by layoutPhrases() for one phrase back into a plain text phrase
-function mergePhrase(firstRt) {
-    var ruby = firstRt.parentNode, base = ruby.firstChild.nodeValue, next;
-    while ((next = ruby.nextSibling) && next.lastChild && next.lastChild.classList &&
-           next.lastChild.classList.contains('katakana-terminator-rt') && next.lastChild.dataset.part > 0) {
-        base += next.firstChild.nodeValue;
-        next.remove();
-    }
-    var phrase = _.createTextNode(base);
-    plainPhrases.add(phrase);
-    ruby.replaceWith(phrase);
-    return phrase;
-}
-
-function relayoutPhrases() {
-    layoutPhrases(Array.from(_.querySelectorAll('rt.katakana-terminator-rt[data-part="0"]'), mergePhrase));
-}
+// Set up by main() when the browser needs it
+var rubyLineBreaker = null;
 
 // Split word list into chunks to limit the length of API requests
 function translateTextNodes() {
@@ -321,8 +346,8 @@ function updateRubyByCachedTranslations(phrase) {
     if (!cachedTranslations[phrase]) {
         return;
     }
-    if (!rubyBreaksNatively) {
-        scheduleLayout(queue[phrase] || []);
+    if (rubyLineBreaker) {
+        rubyLineBreaker.schedule(queue[phrase] || []);
     } else {
         (queue[phrase] || []).forEach(function(node) {
             node.dataset.rt = cachedTranslations[phrase];
@@ -343,19 +368,8 @@ function mutationHandler(mutationList) {
 function main() {
     GM_addStyle("rt.katakana-terminator-rt::before { content: attr(data-rt); }");
 
-    detectBreakableRuby();
-    if (!rubyBreaksNatively) {
-        // Line breaks move when the page width changes
-        var resizing = false;
-        window.addEventListener('resize', function() {
-            if (!resizing) {
-                resizing = true;
-                requestAnimationFrame(function() {
-                    resizing = false;
-                    relayoutPhrases();
-                });
-            }
-        });
+    if (RubyLineBreaker.isNeeded()) {
+        rubyLineBreaker = new RubyLineBreaker();
     }
 
     var observer = new MutationObserver(mutationHandler);
