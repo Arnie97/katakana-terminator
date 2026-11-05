@@ -82,16 +82,17 @@ function addRuby(node) {
 var rubyBreaksNatively;
 var pendingBreaks = [];
 
+// Measure a test ruby inside a shadow root, so that page styles neither reach it nor match against it
 function detectBreakableRuby() {
-    var box = _.createElement('div'), ruby = _.createElement('ruby'), rt = _.createElement('rt');
-    box.style.cssText = 'position: absolute; visibility: hidden; width: 0';
+    var host = _.createElement('div'), ruby = _.createElement('ruby'), rt = _.createElement('rt');
+    host.style.cssText = 'all: initial; display: block; position: absolute; visibility: hidden; width: 0';
     ruby.textContent = 'アイウエオ';
     rt.textContent = 'a b c';
     ruby.appendChild(rt);
-    box.appendChild(ruby);
-    _.body.appendChild(box);
+    host.attachShadow({mode: 'closed'}).appendChild(ruby);
+    _.documentElement.appendChild(host);
     rubyBreaksNatively = ruby.getClientRects().length > 1;
-    box.remove();
+    host.remove();
 }
 
 function scheduleBreakRubies(rubies) {
